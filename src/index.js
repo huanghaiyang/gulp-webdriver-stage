@@ -1,15 +1,20 @@
 import through from 'through2'
 import resolve from 'resolve'
+import merge from 'deepmerge'
 import path from 'path'
 import gutil from 'gulp-util'
 import _ from 'lodash'
 import async from 'async'
 import fs from 'graceful-fs'
+import ev from 'eval'
 
 const tmp = './tmp/'
 
 module.exports = (options) => {
     return through.obj(function (file, encoding, callback) {
+        if (!fs.existsSync(tmp)) {
+            fs.mkdirSync(tmp)
+        }
         let stream = this
         const webdriverPath = path.dirname(resolve.sync('webdriverio'))
         const Launcher = require(path.join(webdriverPath, 'lib/launcher'))
@@ -22,7 +27,7 @@ module.exports = (options) => {
                 // 配置解析器
                 let configParser = new ConfigParser()
 
-                let configs = JSON.parse(file.contents.toString('utf8')).config
+                let configs = merge(ev(file.contents.toString('utf8'), true).config, options)
 
                 // test files
                 let specs = configParser.getSpecs(configs.specs, configs.exclude)
@@ -68,9 +73,9 @@ module.exports = (options) => {
 
                         let wdio = new Launcher(newFilename, options)
 
-                        gutil.log(`开始执行第 ${key} 阶段测试`, gutil.colors.magenta('green'))
+                        gutil.log(`开始执行第 ${key} 阶段测试`)
                         wdio.run().then(code => {
-                            gutil.log(`第 ${key} 阶段测试退出, 任务状态码: ${code}`, gutil.colors.magenta('green'))
+                            gutil.log(`第 ${key} 阶段测试退出, 任务状态码: ${code}`)
                             cb()
                         }, e => {
                             process.nextTick(() => stream.emit('error', new gutil.PluginError('gulp-webdriver-stage', `第 ${key} 阶段测试失败`, {
