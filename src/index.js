@@ -28,6 +28,7 @@ module.exports = (options) => {
                 let configParser = new ConfigParser()
 
                 let configs = merge(ev(file.contents.toString('utf8'), true).config, options)
+                delete configs.stages
 
                 // test files
                 let specs = configParser.getSpecs(configs.specs, configs.exclude)
